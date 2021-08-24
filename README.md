@@ -16,6 +16,14 @@ The goal of `cloudstoR` is to simplify accessing data stored on
 interface. You can use `cloudstoR` to download or upload files, or check
 the contents of directories.
 
+## OS Dependencies
+
+For Linux distributions, you need to install `libsodium-dev`. For example for Ubuntu:
+
+```bash
+sudo apt-get install libsodium-dev -y
+```
+
 ## Installation
 
 You can install from CRAN (soon…) with:
