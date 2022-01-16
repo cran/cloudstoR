@@ -1,10 +1,10 @@
 # Create a package environment
-cloudstoR.env <- new.env(parent = emptyenv())
+cloudstoR.env <- new.env(parent = emptyenv()) # nolint
 
-.onLoad <- function(libname, pkgname) {
+.onLoad <- function(libname, pkgname) { # nolint
   # Set default cloud_address
   op <- options()
-  op.cloudstoR <- list(
+  op.cloudstoR <- list( # nolint
     cloudstoR.cloud_address =
       "https://cloudstor.aarnet.edu.au/plus/remote.php/webdav/"
   )
@@ -25,8 +25,7 @@ cloudstoR.env <- new.env(parent = emptyenv())
 #' @param path path to file or folder
 #'
 #' @return encoded url as string
-#'
-#' @examples
+#' @keywords internal
 get_cloud_address <- function(path) {
   cloud_address <- paste0(getOption("cloudstoR.cloud_address"), path)
   cloud_address <- utils::URLencode(cloud_address)
@@ -37,18 +36,17 @@ get_cloud_address <- function(path) {
 #'
 #' Return a handle for CURL to use. Not a user facing function
 #'
-#' @param user cloudstor username
-#' @param password cloudstor password
+#' @param user Cloudstor username
+#' @param password Cloudstor password
 #' @param reset remove the existing authentication and handle
 #'
 #' @return curl handle object
-#'
-#' @examples
+#' @keywords internal
 get_handle <- function(user, password, reset = FALSE) {
   # If authentication has expired, or reset called
   if (
     (difftime(Sys.time(), get("authenticated", envir = cloudstoR.env),
-              units = "min")>5)
+              units = "min") > 5)
     | reset) {
     h <- curl::new_handle(failonerror = TRUE)
     curl::handle_setopt(h, username = user)
@@ -69,14 +67,15 @@ get_handle <- function(user, password, reset = FALSE) {
 
 #' cloud_list
 #'
-#' @param path path to file or folder
-#' @param user cloudstor user name
-#' @param password cloudstor password
+#' @description
+#' `cloud_list()` returns a list of the files located in a folder.
 #'
-#' @return a list of files and folders
+#' @param path The path to file or folder.
+#' @param user Cloudstor user name.
+#' @param password Cloudstor password.
+#'
+#' @return A list of files and folders.
 #' @export
-#'
-#' @examples
 cloud_list <- function(path = "",
                        user = cloud_auth_user(),
                        password = cloud_auth_pwd()) {
@@ -88,7 +87,8 @@ cloud_list <- function(path = "",
   text <- rawToChar(response$content)
   doc <- XML::xmlParse(text, asText = TRUE)
   # calculate relative paths
-  base <- paste(paste("/", strsplit(utils::URLdecode(cloud_address), "/")[[1]][-1:-3],
+  base <- paste(paste("/", strsplit(utils::URLdecode(cloud_address),
+                                    "/")[[1]][-1:-3],
     sep = "",
     collapse = ""
   ), "/", sep = "")
@@ -102,24 +102,26 @@ cloud_list <- function(path = "",
 
 #' cloud_get
 #'
-#' Download a file from a cloudstor folder. The file is opened
+#' @description
+#' `cloud_list()` downloads a file from a Cloudstor folder. The file is opened
 #' and read into R using rio, or optionally the file path is returned.
 #'
-#' @param path path to file or folder
-#' @param user cloudstor user name
-#' @param password cloudstor password
-#' @param dest destination for saving the file
-#' @param open_file if TRUE, open the file using rio. Else, returns the file path
+#' @param path The path to file or folder.
+#' @param user Cloudstor user name
+#' @param password Cloudstor password
+#' @param dest The destination for saving the file.
+#' @param open_file If TRUE, open the file using rio.
+#' Else, returns the file path
+#' @param \dots pass additional arguments to `rio::import()`
 #'
-#' @return the file object or folder path, depending on open_file
+#' @return The file object or folder path is returned, depending on `open_file`
 #' @export
-#'
-#' @examples
 cloud_get <- function(path,
                       dest = NULL,
                       user = cloud_auth_user(),
                       password = cloud_auth_pwd(),
-                      open_file = TRUE) {
+                      open_file = TRUE,
+                      ...) {
   cloud_address <- get_cloud_address(path)
   if (is.null(dest)) {
     p <- file.path(tempdir(), basename(path))
@@ -129,7 +131,8 @@ cloud_get <- function(path,
   h <- get_handle(user, password)
   curl::curl_download(cloud_address, p, handle = h)
   if (open_file) {
-    d <- rio::import(p)
+    d <- rio::import(p, ...)
+    on.exit(unlink(p))
     return(d)
   } else {
     return(p)
@@ -139,44 +142,61 @@ cloud_get <- function(path,
 
 #' cloud_put
 #'
-#' Save a file to cloudstor.
+#' @description
+#' `cloud_put()` saves a file to Cloudstor. If the file already exists, it is
+#' replaced.
 #'
-#' @param file_name What you want to call the file on cloudstor
-#' @param local_file Where the file is located
-#' @param path path to file or folder
-#' @param user Your cloudstor username
-#' @param password Your cloudstor password
+#' @param local_file Where the file is located on your computer.
+#' @param path The destination on Cloudstor.
+#' @param file_name Optional. What you want to call the file on Cloudstor?
+#' If it is not provided, it is the same as the file name of the local file
+#' @param user Optional. Your Cloudstor username.
+#' @param password Optional. Your Cloudstor password.
 #'
-#' @return nothing
+#' @return Nothing is returned. A success or error message is printed.
 #' @export
-#'
-#' @examples
-cloud_put <- function(file_name,
-                      local_file,
+cloud_put <- function(local_file,
                       path = "",
+                      file_name = basename(local_file),
                       user = cloud_auth_user(),
                       password = cloud_auth_pwd()) {
-  cloud_address <- get_cloud_address(file.path(path,file_name))
+  cloud_address <- get_cloud_address(file.path(path, file_name))
   in_path <- path.expand(local_file)
-  httr::PUT(cloud_address,
+  resp <- httr::PUT(cloud_address,
     body = httr::upload_file(in_path),
     config = httr::authenticate(user, password)
   )
+
+  # Alert user on error
+  httr::stop_for_status(resp, "upload file")
+
+  if (httr::http_status(resp)$category == "Success") {
+    msgtype <- switch(as.character(httr::status_code(resp)),
+      "204" = "updated",
+      "201" = "added"
+    )
+
+    cli::cli_alert_success(sprintf(
+      "Success! Your file has been %s.",
+      msgtype
+    ))
+  }
+
 }
 
 
 #' cloud_meta
 #'
-#' Return a data.frame of the metadata for a file or folder
+#' @description
+#' `cloud_meta()` returns the metadata for a file or folder. This can be useful
+#' for checking if a file has been modified.
 #'
-#' @param path path to file or folder
-#' @param user Your cloudstor username
-#' @param password Your cloudstor password
+#' @param path The path to file or folder.
+#' @param user Your Cloudstor username
+#' @param password Your Cloudstor password
 #'
-#' @return a data.frame of the file and folder metadata
+#' @return A data.frame of the file and folder metadata is returned.
 #' @export
-#'
-#' @examples
 cloud_meta <- function(path = "",
                        user = cloud_auth_user(),
                        password = cloud_auth_pwd()) {
@@ -230,16 +250,29 @@ cloud_meta <- function(path = "",
 
 #' cloud_browse
 #'
-#' Navigate the folder tree interactively.
+#' @description
+#' `cloud_browse()` lets you navigate the folder tree interactively. This is
+#' useful for finding a file or folder path which can then be used in
+#' `cloud_get()` or `cloud_put()`. This function is only intended to be used
+#' interactively - you should not use this function programmatically.
 #'
-#' @param path initial path to start the search
-#' @param user Your cloudstor username
-#' @param password Your cloudstor password
+#' When you call `cloud_browse()` you are given a list of files and folders
+#' (either at the top-level, or from the provided `path`). You provide the
+#' numeric number of the folder or file you wish to move to to continue. If you
+#' are not at the top level, you can select "../" to move up one folder. At any
+#' time you can select 0 to exit the interactive navigation.
+#'
+#' If you select a folder, you are shown the files and folders within that
+#' folder. If you select a file, the full path for the file is shown (so that
+#' it can be passed to another function) and the interactive session is ended.
+#'
+#' @param path The initial path to start the search. If not provided, the
+#' function starts at the top-level folder.
+#' @param user Your Cloudstor username.
+#' @param password Your Cloudstor password.
 #'
 #' @return the last file path
 #' @export
-#'
-#' @examples
 cloud_browse <- function(path = "",
                          user = cloud_auth_user(),
                          password = cloud_auth_pwd()) {
@@ -289,7 +322,6 @@ cloud_browse <- function(path = "",
         }
       }
     }
-    # TODO - check if the selection is a file and force exit
 
     # If the selection is a file, force exit
     if (nchar(new_path) > 0 &

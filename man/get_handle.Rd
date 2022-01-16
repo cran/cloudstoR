@@ -7,9 +7,9 @@
 get_handle(user, password, reset = FALSE)
 }
 \arguments{
-\item{user}{cloudstor username}
+\item{user}{Cloudstor username}
 
-\item{password}{cloudstor password}
+\item{password}{Cloudstor password}
 
 \item{reset}{remove the existing authentication and handle}
 }
@@ -19,3 +19,4 @@ curl handle object
 \description{
 Return a handle for CURL to use. Not a user facing function
 }
+\keyword{internal}

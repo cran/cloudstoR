@@ -1,13 +1,13 @@
 #' cloud_auth
 #'
-#' Get users credentials and store them securely in keyring.
+#' @description
+#' `cloud_auth()` gets the user's credentials and stores them securely in
+#' keyring.
 #'
-#' @param reset_keys override existing keys
+#' @param reset_keys Override existing keys.
 #'
-#' @return Nothing. Keys are stored in Keyring.
+#' @return Nothing. Keys are stored in keyring.
 #' @export
-#'
-#' @examples
 cloud_auth <- function(reset_keys = FALSE) {
   current_keys <- keyring::key_list()$service
 
@@ -54,11 +54,10 @@ cloud_auth <- function(reset_keys = FALSE) {
 
 #' cloud_auth_user
 #'
-#' Used to return a stored cloudstor username, or request the user set one.
+#' Used to return a stored Cloudstor username, or request the user set one.
 #' Not a user-facing function.
 #' @return user id as string.
-#'
-#' @examples
+#' @keywords internal
 cloud_auth_user <- function() {
   if (!"CLOUDSTOR_USER" %in% keyring::key_list()$service) {
     cloud_auth()
@@ -68,11 +67,10 @@ cloud_auth_user <- function() {
 
 #' cloud_auth_pwd
 #'
-#' Used to return a stored cloudstor password, or request the user set one.
+#' Used to return a stored Cloudstor password, or request the user set one.
 #' Not a user-facing function.
 #' @return user password as string.
-#'
-#' @examples
+#' @keywords internal
 cloud_auth_pwd <- function() {
   if (!"CLOUDSTOR_PWD" %in% keyring::key_list()$service) {
     cloud_auth()

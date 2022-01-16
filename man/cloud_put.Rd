@@ -5,27 +5,29 @@
 \title{cloud_put}
 \usage{
 cloud_put(
-  file_name,
   local_file,
   path = "",
+  file_name = basename(local_file),
   user = cloud_auth_user(),
   password = cloud_auth_pwd()
 )
 }
 \arguments{
-\item{file_name}{What you want to call the file on cloudstor}
+\item{local_file}{Where the file is located on your computer.}
 
-\item{local_file}{Where the file is located}
+\item{path}{The destination on Cloudstor.}
 
-\item{path}{path to file or folder}
+\item{file_name}{Optional. What you want to call the file on Cloudstor?
+If it is not provided, it is the same as the file name of the local file}
 
-\item{user}{Your cloudstor username}
+\item{user}{Optional. Your Cloudstor username.}
 
-\item{password}{Your cloudstor password}
+\item{password}{Optional. Your Cloudstor password.}
 }
 \value{
-nothing
+Nothing is returned. A success or error message is printed.
 }
 \description{
-Save a file to cloudstor.
+\code{cloud_put()} saves a file to Cloudstor. If the file already exists, it is
+replaced.
 }
